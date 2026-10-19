@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}My Account | Serene Valley{% endblock %}
+{% block content %}
+<section class="profile-section">
+    <div class="profile-card">
+        <p class="eyebrow">MY ACCOUNT</p>
+        <h1>Welcome, {{ request.user.first_name|default:request.user.username }}.</h1>
+        <p class="auth-subtitle">Your stays and account details, together in one place.</p>
+
+        <div class="profile-details">
+            <p><strong>Username:</strong> {{ request.user.username }}</p>
+            <p><strong>Name:</strong> {{ request.user.get_full_name|default:"Not provided" }}</p>
+            <p><strong>Email:</strong> {{ request.user.email|default:"Not provided" }}</p>
+            <p><strong>Phone:</strong> {{ request.user.phone|default:"Not provided" }}</p>
+            <p><strong>Account type:</strong> {{ request.user.get_role_display }}</p>
+        </div>
+
+        <div class="booking-actions">
+        <a href="{% url 'home' %}#rooms" class="gold-button">Explore rooms</a>
+        <a href="{% url 'bookings:my_bookings' %}" class="outline-button">My bookings</a>
+        </div>
+
+        <form method="POST" action="{% url 'accounts:logout' %}" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="outline-button">Sign Out</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

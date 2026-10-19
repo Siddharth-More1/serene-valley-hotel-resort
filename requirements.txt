@@ -1,0 +1,10 @@
+Django>=5.2,<5.3
+Pillow>=10,<13
+python-dotenv>=1,<2
+razorpay>=2,<3
+dj-database-url>=2.3,<4
+psycopg[binary]>=3.2,<4
+whitenoise>=6.9,<7
+gunicorn>=23,<24
+django-storages[s3]>=1.14,<2
+reportlab>=4,<5

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Sign In | Serene Valley{% endblock %}
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card">
+        <p class="eyebrow">YOUR STAY, ALL IN ONE PLACE</p>
+        <h1>Welcome back</h1>
+        <p class="auth-subtitle">Sign in to pick up where your getaway begins.</p>
+
+        <form method="POST" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% for error in form.username.errors %}<small class="error-text" role="alert">{{ error }}</small>{% endfor %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% for error in form.password.errors %}<small class="error-text" role="alert">{{ error }}</small>{% endfor %}
+            </div>
+
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <button type="submit" class="gold-button full-width">
+                Sign in
+            </button>
+        </form>
+
+        <p class="auth-footer">
+            New to Serene Valley? <a href="{% url 'accounts:register' %}">Create an account</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

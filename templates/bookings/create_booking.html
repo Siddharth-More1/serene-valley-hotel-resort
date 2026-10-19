@@ -1,0 +1,41 @@
+
+{% extends "base.html" %}
+
+{% block title %}Reserve Your Stay | Serene Valley{% endblock %}
+{% block content %}
+<section class="auth-section booking-form-section">
+    <div class="auth-card booking-form-card">
+        <p class="eyebrow">YOUR VALLEY ESCAPE</p>
+        <h1>Reserve your stay</h1>
+        <p class="auth-subtitle">
+            Choose your room and dates. We’ll take care of the thoughtful details.
+        </p>
+
+        <form method="POST" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% for error in field.errors %}
+                        <small class="error-text" id="{{ field.id_for_label }}-error-{{ forloop.counter }}" role="alert">{{ error }}</small>
+                    {% endfor %}
+                    {% if field.help_text %}<small class="helptext">{{ field.help_text }}</small>{% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="gold-button full-width">
+                Request this stay <span aria-hidden="true">&#8594;</span>
+            </button>
+        </form>
+        <p class="form-assurance">Your total is calculated securely from the room rate and number of nights.</p>
+    </div>
+</section>
+{% endblock %}

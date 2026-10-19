@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Reservation #{{ booking.id }} | Serene Valley{% endblock %}
+
+{% block content %}
+<section class="profile-section">
+    <div class="profile-card">
+        <p class="eyebrow">YOUR RESERVATION</p>
+        <div class="booking-card-heading">
+            <h1>Stay details</h1>
+            <span class="status-pill status-{{ booking.status|lower }}">{{ booking.get_status_display }}</span>
+        </div>
+        <p class="auth-subtitle">Reservation #{{ booking.id }} · {{ booking.room.room_type.name }}</p>
+
+        <div class="profile-details">
+            <p><strong>Room:</strong> {{ booking.room.room_number }} · {{ booking.room.room_type.name }}</p>
+            <p><strong>Check-in:</strong> {{ booking.check_in }}</p>
+            <p><strong>Check-out:</strong> {{ booking.check_out }}</p>
+            <p><strong>Guests:</strong> {{ booking.guests }}</p>
+            <p><strong>Total:</strong> &#8377;{{ booking.total_price }}</p>
+            <p><strong>Reservation status:</strong> {{ booking.get_status_display }}</p>
+        </div>
+
+        {% with payments=booking.payments.all %}
+        {% if payments %}
+        <div class="payment-history" aria-labelledby="payment-history-title">
+            <h2 id="payment-history-title">Payment updates</h2>
+            {% for payment in payments %}
+            <div class="payment-history-row">
+                <span>{{ payment.created_at|date:"M j, Y" }}</span>
+                <span class="status-pill status-{{ payment.status|lower }}">{{ payment.get_status_display }}</span>
+                <strong>&#8377;{{ payment.amount }}</strong>
+                {% if payment.status == "SUCCESS" and payment.receipt %}
+                <a href="{% url 'payments:receipt' payment.receipt.pk %}">View receipt</a>
+                <a href="{% url 'payments:receipt_pdf' payment.receipt.pk %}">Download PDF</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if booking.status == "CHECKED_IN" %}
+        <section class="payment-history" aria-labelledby="guest-services-title">
+            <h2 id="guest-services-title">Guest services</h2>
+            <a class="outline-button" href="{% url 'operations:service_request' booking.pk %}">Browse and request services</a>
+            {% for service_request in service_requests %}
+            <div class="payment-history-row"><span>{{ service_request.service.name }} × {{ service_request.quantity }}</span><span>{{ service_request.get_status_display }}</span></div>
+            {% empty %}<p class="text-secondary mt-2">No service requests yet.</p>{% endfor %}
+        </section>
+        {% endif %}
+
+        {% if checkout_invoice and checkout_invoice.status != "DRAFT" %}
+        <div class="booking-detail-actions"><a class="outline-button" href="{% url 'operations:invoice' checkout_invoice.pk %}">View final invoice and balance</a></div>
+        {% endif %}
+
+        <div class="booking-detail-actions">
+        {% if booking.status == "PENDING" %}
+            <form method="POST" action="{% url 'bookings:cancel' booking.id %}">
+                {% csrf_token %}
+                <button type="submit" class="outline-button">Cancel booking</button>
+            </form>
+            <p class="detail-note">Your booking is waiting for manager confirmation.</p>
+        {% elif booking.status == "CONFIRMED" %}
+            {% if not has_successful_payment %}
+            <form method="POST" action="{% url 'payments:create' booking.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gold-button">Continue to secure payment <span aria-hidden="true">&#8594;</span></button>
+            </form>
+            {% endif %}
+        {% elif booking.status == "CANCELLED" %}
+            <p class="detail-note">This booking has been cancelled.</p>
+        {% endif %}
+            <a href="{% url 'bookings:my_bookings' %}" class="back-link">&#8592; Back to my bookings</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

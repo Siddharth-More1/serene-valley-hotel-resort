@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Serene Valley | Nature-led Hotel &amp; Resort{% endblock %}
+
+{% block content %}
+<section class="hero" aria-labelledby="hero-title">
+    <div class="container hero-content">
+        <div class="hero-copy">
+            <p class="eyebrow">A NATURE-LED ESCAPE</p>
+            <h1 id="hero-title">Come away.<br><em>Come back renewed.</em></h1>
+            <p class="hero-description">Find room to breathe, thoughtful comforts and the quiet beauty of the valley.</p>
+            <div class="hero-actions">
+                <a href="#rooms" class="btn btn-gold btn-lg">Explore our rooms <span aria-hidden="true">&#8594;</span></a>
+                <span class="hero-note">A little closer to what matters.</span>
+            </div>
+        </div>
+        <div class="hero-stamp" aria-hidden="true"><span>✳</span><small>STAY<br>IN NATURE</small></div>
+    </div>
+    <a class="hero-scroll" href="#rooms"><span aria-hidden="true">↓</span> DISCOVER YOUR STAY</a>
+</section>
+
+<section class="rooms-section section-pad" id="rooms">
+    <div class="container">
+        <div class="section-heading d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+            <div>
+                <p class="eyebrow">REST, YOUR WAY</p>
+                <h2>Rooms &amp; suites</h2>
+                <p class="section-intro mb-0">Quiet corners, soft linens and a view worth waking up for.</p>
+            </div>
+            <span class="section-aside">Thoughtfully made for the way you travel.</span>
+        </div>
+
+        <div class="row g-4 room-grid">
+            {% for room in rooms %}
+            <div class="col-md-6 col-lg-3">
+                <article class="card room-card h-100">
+                    {% if room.image %}
+                    <img src="{{ room.image.url }}" class="card-img-top room-image" alt="{{ room.name }} room at Serene Valley" loading="lazy">
+                    {% else %}
+                    <div class="room-placeholder" role="img" aria-label="Room photograph not yet available">
+                        <span aria-hidden="true">✳</span><span>Room photography coming soon</span>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <div class="room-card-topline"><span>ROOM &amp; SUITE</span><span class="room-capacity">{{ room.capacity }} guests</span></div>
+                        <h3>{{ room.name }}</h3>
+                        <p class="room-description">{{ room.description|truncatewords:15 }}</p>
+                        <p class="room-price"><span>&#8377;{{ room.price_per_night }}</span><small>per night</small></p>
+                        <p class="room-availability {% if room.available_room_count %}is-available{% else %}is-unavailable{% endif %}">
+                            <span class="availability-dot" aria-hidden="true"></span>
+                            {% if room.available_room_count %}
+                                {{ room.available_room_count }} room{{ room.available_room_count|pluralize }} available today
+                            {% else %}
+                                No rooms available today
+                            {% endif %}
+                        </p>
+                        <a class="btn btn-room" href="{% url 'bookings:create' %}?room_type={{ room.pk }}">
+                            Book Now <span aria-hidden="true">&#8594;</span>
+                        </a>
+                    </div>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <span class="empty-state-mark" aria-hidden="true">✳</span>
+                    <h3>Something lovely is taking shape.</h3>
+                    <p class="text-secondary mb-0">Our rooms are being prepared for their next guests. Please check back soon.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="facilities-section section-pad" id="facilities">
+    <div class="container">
+        <div class="section-heading section-heading-light text-center mb-5">
+            <p class="eyebrow">SLOW DOWN, SETTLE IN</p>
+            <h2>Little moments, made memorable</h2>
+            <p class="section-intro">A few thoughtful ways to make your time here your own.</p>
+        </div>
+        <div class="row g-3">
+            {% for service in services %}
+            <div class="col-6 col-md-4 col-lg-2">
+                <article class="facility-card h-100">
+                    <span class="facility-icon" aria-hidden="true">✳</span>
+                    <h3>{{ service.name }}</h3>
+                    <p class="small mb-0">{{ service.description|truncatewords:10 }}</p>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12"><p class="empty-light">We’re preparing a few more thoughtful ways to unwind. Please check back soon.</p></div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

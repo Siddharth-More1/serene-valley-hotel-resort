@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Guest Services | Serene Valley{% endblock %}
+{% block content %}
+<section class="profile-section">
+  <div class="profile-card profile-wide">
+    <p class="eyebrow">YOUR STAY · RESERVATION #{{ booking.pk }}</p>
+    <h1>Guest services</h1>
+    <p class="auth-subtitle">Requests are billed only after the hotel team confirms the service was provided.</p>
+    {% if can_request %}
+      {% if services %}
+      <div class="row g-3 mb-4">
+        {% for service in services %}<div class="col-md-6"><div class="manager-feature-card h-100"><h2 class="h5">{{ service.name }}</h2><p>{{ service.description|default:"Available during your stay." }}</p><strong>INR {{ service.price }} per unit</strong></div></div>{% endfor %}
+      </div>
+      <form method="post" class="profile-details">{% csrf_token %}
+        {{ form.as_p }}
+        <button class="gold-button" type="submit">Request service</button>
+      </form>
+      {% else %}<div class="empty-state"><h2>No services available</h2><p>Please check again later or ask the front desk.</p></div>{% endif %}
+    {% else %}
+      <div class="alert alert-info">Service requests are available only during your checked-in stay.</div>
+    {% endif %}
+    <h2 class="h4 mt-5">Your requests</h2>
+    {% for service_request in requests %}
+      <div class="payment-history-row"><span>{{ service_request.service.name }} × {{ service_request.quantity }}</span><span>Requested price: INR {{ service_request.price_at_request }}</span><span class="status-pill status-{{ service_request.status|lower }}">{{ service_request.get_status_display }}</span><span>{{ service_request.requested_at|date:"M j, Y g:i a" }}</span>{% if service_request.staff_note %}<p>{{ service_request.staff_note }}</p>{% endif %}</div>
+    {% empty %}<p class="text-secondary">You have not requested any services for this stay.</p>{% endfor %}
+    <a class="back-link" href="{% url 'bookings:detail' booking.pk %}">Back to reservation</a>
+  </div>
+</section>
+{% endblock %}

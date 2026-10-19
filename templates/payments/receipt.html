@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt {{ receipt.receipt_number }} | Serene Valley{% endblock %}
+
+{% block content %}
+<section class="profile-section">
+    <article class="profile-card receipt-card">
+        <div class="booking-card-heading">
+            <div>
+                <p class="eyebrow">PAYMENT RECEIPT</p>
+                <h1>{{ receipt.details.hotel_name }}</h1>
+                <p class="auth-subtitle">Receipt {{ receipt.receipt_number }} · {{ receipt.issued_at|date:"M j, Y, g:i a" }}</p>
+            </div>
+            <span class="status-pill status-success">PAID</span>
+        </div>
+
+        {% if receipt.details.receipt_type == "SERVICE" %}
+        <h2>Service payment</h2>
+        <div class="profile-details">
+            <p><strong>Guest:</strong> {{ receipt.details.customer_name }}</p>
+            {% if receipt.details.customer_email %}<p><strong>Email:</strong> {{ receipt.details.customer_email }}</p>{% endif %}
+            {% if receipt.details.customer_phone %}<p><strong>Phone:</strong> {{ receipt.details.customer_phone }}</p>{% endif %}
+            <p><strong>Reservation:</strong> #{{ receipt.details.booking_id }}</p>
+            <p><strong>Final invoice:</strong> {{ receipt.details.invoice_number }}</p>
+            <p><strong>Payment method:</strong> {{ receipt.details.payment_method|default:"Razorpay" }}</p>
+            <p><strong>Razorpay order:</strong> {{ receipt.details.provider_order_id }}</p>
+            <p><strong>Payment reference:</strong> {{ receipt.details.provider_payment_id }}</p>
+            <p><strong>Amount received:</strong> <strong>INR {{ receipt.details.amount_received }}</strong></p>
+        </div>
+        {% else %}
+        <h2>Guest and stay</h2>
+        <div class="profile-details">
+            <p><strong>Guest:</strong> {{ receipt.details.customer_name }}</p>
+            {% if receipt.details.customer_email %}<p><strong>Email:</strong> {{ receipt.details.customer_email }}</p>{% endif %}
+            {% if receipt.details.customer_phone %}<p><strong>Phone:</strong> {{ receipt.details.customer_phone }}</p>{% endif %}
+            <p><strong>Reservation:</strong> #{{ receipt.details.booking_id }}</p>
+            <p><strong>Room:</strong> {{ receipt.details.room_type }} · {{ receipt.details.room_number }}</p>
+            <p><strong>Stay:</strong> {{ receipt.details.check_in }} to {{ receipt.details.check_out }} ({{ receipt.details.nights }} nights)</p>
+            <p><strong>Guests:</strong> {{ receipt.details.guests }}</p>
+        </div>
+        {% endif %}
+
+        {% if receipt.details.receipt_type == "SERVICE" %}
+        <h2>Payment details</h2>
+        <div class="profile-details">
+            <p><strong>Currency:</strong> {{ receipt.details.currency }}</p>
+            <p><strong>Amount received in this payment:</strong> <strong>INR {{ receipt.details.amount_received }}</strong></p>
+        </div>
+        {% else %}
+        <h2>Payment</h2>
+        <div class="profile-details">
+            <p><strong>Room rate:</strong> INR {{ receipt.details.nightly_rate }} × {{ receipt.details.nights }} nights</p>
+            <p><strong>Payment method:</strong> {{ receipt.details.payment_method|default:"Razorpay" }}</p>
+            <p><strong>Razorpay order:</strong> {{ receipt.details.provider_order_id }}</p>
+            <p><strong>Payment reference:</strong> {{ receipt.details.provider_payment_id }}</p>
+            <p><strong>Room charges:</strong> INR {{ receipt.details.amount }}</p>
+            <p><strong>Total paid:</strong> <strong>INR {{ receipt.details.amount }}</strong></p>
+        </div>
+        {% endif %}
+
+        {% if receipt.details.hotel_address or receipt.details.hotel_email or receipt.details.hotel_phone or receipt.details.hotel_gstin %}
+        <p class="auth-subtitle">
+            {{ receipt.details.hotel_address }}{% if receipt.details.hotel_email %} · {{ receipt.details.hotel_email }}{% endif %}{% if receipt.details.hotel_phone %} · {{ receipt.details.hotel_phone }}{% endif %}{% if receipt.details.hotel_gstin %} · GSTIN {{ receipt.details.hotel_gstin }}{% endif %}
+        </p>
+        {% endif %}
+        <div class="booking-detail-actions receipt-actions">
+            <a class="gold-button" href="{% url 'payments:receipt_pdf' receipt.pk %}">Download PDF</a>
+            <button class="outline-button" type="button" onclick="window.print()">Print receipt</button>
+            <a class="back-link" href="{% url 'bookings:detail' receipt.payment.booking_id %}">Back to reservation</a>
+            <a class="back-link" href="{% url 'bookings:my_bookings' %}">Back to My Bookings</a>
+        </div>
+    </article>
+</section>
+<style media="print">
+    .site-navbar, .site-footer, .receipt-actions, .skip-link { display: none !important; }
+    .profile-section { padding: 0 !important; }
+    .profile-card { box-shadow: none !important; border: 0 !important; }
+</style>
+{% endblock %}

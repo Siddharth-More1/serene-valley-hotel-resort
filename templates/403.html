@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Access unavailable | Serene Valley{% endblock %}
+{% block content %}
+<section class="error-page">
+    <div class="error-card">
+        <p class="eyebrow">A PRIVATE SPACE</p>
+        <h1>This page isn’t available to your account.</h1>
+        <p>Your account doesn’t have permission to view this area. You can return to the rooms and continue planning your stay.</p>
+        <a href="{% url 'home' %}" class="gold-button">Back to Serene Valley</a>
+    </div>
+</section>
+{% endblock %}

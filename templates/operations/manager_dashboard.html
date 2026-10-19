@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Dashboard | Serene Valley{% endblock %}
+
+{% block content %}
+<section class="container py-5 manager-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <p class="eyebrow mb-2">HOTEL OPERATIONS</p>
+            <h1>Manager Dashboard</h1>
+        </div>
+        <a class="btn btn-forest-outline" href="{% url 'admin:index' %}">Open management admin <span aria-hidden="true">&#8594;</span></a>
+        <a class="btn btn-forest-outline" href="{% url 'operations:service_board' %}">Service requests &amp; folios</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">All bookings</p><h2>{{ total_bookings }}</h2></div></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">Pending</p><h2>{{ pending_bookings }}</h2></div></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">Confirmed</p><h2>{{ confirmed_bookings }}</h2></div></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">Checked in</p><h2>{{ checked_in_bookings }}</h2></div></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">Checked out</p><h2>{{ checked_out_bookings }}</h2></div></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="card manager-stat h-100"><div class="card-body"><p class="text-secondary mb-1">Cancelled</p><h2>{{ cancelled_bookings }}</h2></div></div></div>
+    </div>
+
+    <div class="row g-3 mb-5">
+        <div class="col-md-6">
+            <div class="manager-feature-card">
+                <h2 class="h5">Current occupancy</h2>
+                {% if occupancy_calculable %}
+                    <p class="display-6 mb-1">{{ occupancy_percent }}%</p>
+                    <p class="text-secondary mb-0">{{ occupied_rooms }} checked-in room{{ occupied_rooms|pluralize }} out of {{ active_rooms }} active room{{ active_rooms|pluralize }} today.</p>
+                {% else %}
+                    <p class="text-secondary mb-0">Occupancy cannot be calculated because no rooms are currently marked available.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="manager-feature-card">
+                <h2 class="h5">Verified booking revenue</h2>
+                <p class="display-6 mb-1">&#8377;{{ verified_revenue|floatformat:2 }}</p>
+                <p class="text-secondary mb-0">Sum of successful, verified payment records only.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h4 mb-0">Recent bookings</h2>
+        <a href="{% url 'admin:bookings_booking_changelist' %}">Search and manage bookings</a>
+    </div>
+    {% if recent_bookings %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle manager-table">
+            <thead><tr><th scope="col">Booking</th><th scope="col">Room</th><th scope="col">Dates</th><th scope="col">Status</th><th scope="col">Total</th></tr></thead>
+            <tbody>
+                {% for booking in recent_bookings %}
+                <tr>
+                    <td>#{{ booking.pk }}</td>
+                    <td>{{ booking.room.room_number }}  |  {{ booking.room.room_type.name }}</td>
+                    <td>{{ booking.check_in }} to {{ booking.check_out }}</td>
+                    <td>{{ booking.get_status_display }}</td>
+                    <td>&#8377;{{ booking.total_price|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">There are no bookings yet. New reservations will appear here.</div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Secure Checkout | Serene Valley{% endblock %}
+
+{% block content %}
+<section class="profile-section checkout-section">
+    <div class="profile-card checkout-card">
+        <p class="eyebrow">SECURE CHECKOUT</p>
+        <h1>Complete your payment</h1>
+        <p class="auth-subtitle">{% if payment.kind == "SERVICE" %}Settle your final stay invoice securely.{% else %}You’re one step away from your time in the valley.{% endif %}</p>
+
+        <div class="profile-details">
+            <p><strong>Reservation:</strong> #{{ payment.booking.id }}</p>
+            {% if payment.kind == "SERVICE" %}
+            <p><strong>Final invoice:</strong> {{ payment.invoice.invoice_number }}</p>
+            {% else %}
+            <p><strong>Room:</strong> {{ payment.booking.room.room_type.name }}</p>
+            <p><strong>Stay:</strong> {{ payment.booking.check_in }} <span aria-hidden="true">&#8594;</span> {{ payment.booking.check_out }}</p>
+            {% endif %}
+            <p class="checkout-total"><span>Total due</span><strong>&#8377;{{ payment.amount }}</strong></p>
+        </div>
+
+        <button id="pay-button" class="gold-button full-width" type="button">
+            Pay securely <span aria-hidden="true">&#8594;</span>
+        </button>
+        <p id="payment-message" role="status" aria-live="polite">Your payment is verified securely before your account is updated.</p>
+        <p class="checkout-footnote">Payments are processed securely by Razorpay. Please keep this page open until verification completes.</p>
+    </div>
+</section>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    const options = {
+        key: "{{ razorpay_key_id|escapejs }}",
+        amount: "{{ amount_paise }}",
+        currency: "INR",
+        name: "Serene Valley Hotel & Resort",
+        description: "{% if payment.kind == 'SERVICE' %}Invoice {{ payment.invoice.invoice_number }}{% else %}Booking #{{ payment.booking.id }}{% endif %}",
+        order_id: "{{ payment.provider_order_id|escapejs }}",
+        handler: function (response) {
+            document.getElementById("payment-message").textContent =
+                "Payment submitted. Verifying payment securely...";
+
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = "{% url 'payments:verify' payment.id %}";
+
+            const csrf = document.createElement("input");
+            csrf.type = "hidden";
+            csrf.name = "csrfmiddlewaretoken";
+            csrf.value = "{{ csrf_token }}";
+            form.appendChild(csrf);
+
+            for (const [name, value] of Object.entries(response)) {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        },
+        modal: {
+            ondismiss: function () {
+                document.getElementById("payment-message").textContent =
+                    "Checkout closed. Your payment status has not been confirmed.";
+            }
+        },
+        theme: { color: "#c79b55" }
+    };
+
+    document.getElementById("pay-button").addEventListener("click", function () {
+        const checkout = new Razorpay(options);
+        checkout.on("payment.failed", function () {
+            document.getElementById("payment-message").textContent =
+                "Payment was not completed. You can retry securely using this order.";
+        });
+        checkout.open();
+    });
+</script>
+{% endblock %}

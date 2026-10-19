@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}A moment, please | Serene Valley{% endblock %}
+{% block content %}
+<section class="error-page">
+    <div class="error-card">
+        <p class="eyebrow">A BRIEF PAUSE</p>
+        <h1>We’re having a little trouble.</h1>
+        <p>Your request couldn’t be completed just now. Please try again in a moment.</p>
+        <a href="{% url 'home' %}" class="gold-button">Return to the homepage</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Service Folio | Serene Valley{% endblock %}
+{% block content %}
+<section class="container py-5 manager-page">
+  <p class="eyebrow">HOTEL OPERATIONS</p><h1>Service requests and guest folios</h1>
+  <h2 class="h4 mt-4">Open customer requests</h2>
+  {% for item in requests %}
+  <article class="manager-feature-card mb-3">
+    <h3 class="h5">{{ item.service.name }} × {{ item.quantity }} · Booking #{{ item.booking_id }}</h3>
+    <p>{{ item.booking.customer.get_full_name|default:item.booking.customer.username }} · Room {{ item.booking.room.room_number }} · Request price INR {{ item.price_at_request }} per unit</p>
+    {% if item.customer_note %}<p>Guest note: {{ item.customer_note }}</p>{% endif %}
+    <form method="post" action="{% url 'operations:service_request_update' item.pk %}" class="d-flex flex-wrap gap-2 align-items-end">{% csrf_token %}
+      <label class="form-label">Staff note<input class="form-control" type="text" name="staff_note" maxlength="500"></label>
+      <button class="outline-button" name="action" value="approve">Approve</button>
+      <button class="gold-button" name="action" value="complete">Confirm provided</button>
+      <button class="outline-button" name="action" value="reject">Reject</button>
+    </form>
+  </article>
+  {% empty %}<div class="empty-state"><h3>No open service requests</h3><p>New guest requests will appear here.</p></div>{% endfor %}
+
+  <h2 class="h4 mt-5">Checked-in guests</h2>
+  {% for booking in checked_in_bookings %}
+  <article class="manager-feature-card mb-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2"><div><h3 class="h5">Booking #{{ booking.pk }} · Room {{ booking.room.room_number }}</h3><p>{{ booking.customer.get_full_name|default:booking.customer.username }} · Stay through {{ booking.check_out }}</p></div><a class="outline-button" href="{% url 'operations:final_invoice' booking.pk %}">Prepare final invoice</a></div>
+    {% for line in booking.folio_items.all %}<li>{{ line.service.name }} × {{ line.quantity }} — INR {{ line.line_total }} ({{ line.get_status_display }}){% if line.status == "COMPLETED" %}<form method="post" action="{% url 'operations:reverse_folio_item' line.pk %}" class="d-inline-flex ms-2">{% csrf_token %}<input class="form-control form-control-sm" name="reason" required maxlength="500" placeholder="Reason for correction"><button class="btn btn-sm btn-outline-danger">Reverse</button></form>{% endif %}</li>{% endfor %}
+    {% if not booking.checkout_invoice or booking.checkout_invoice.status == "DRAFT" %}
+    <form method="post" action="{% url 'operations:add_folio_item' booking.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+      <div class="col-md-5"><label class="form-label" for="service-{{ booking.pk }}">Service</label><select class="form-select" id="service-{{ booking.pk }}" name="service" required>{% for service in services %}<option value="{{ service.pk }}">{{ service.name }} — INR {{ service.price }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label" for="quantity-{{ booking.pk }}">Quantity</label><input class="form-control" id="quantity-{{ booking.pk }}" type="number" name="quantity" min="1" max="100" value="1" required></div>
+      <div class="col-md-3"><label class="form-label" for="note-{{ booking.pk }}">Note</label><input class="form-control" id="note-{{ booking.pk }}" name="note" maxlength="500"></div>
+      <div class="col-md-2"><button class="gold-button" type="submit">Record usage</button></div>
+    </form>
+    {% endif %}
+  </article>
+  {% empty %}<div class="empty-state"><p>No guests are currently checked in.</p></div>{% endfor %}
+</section>
+{% endblock %}

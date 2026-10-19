@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings | Serene Valley{% endblock %}
+
+{% block content %}
+<section class="profile-section">
+    <div class="profile-card profile-wide">
+        <p class="eyebrow">YOUR TIME AWAY</p>
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+            <div><h1>My bookings</h1><p class="auth-subtitle mb-0">Every part of your stay, thoughtfully kept together.</p></div>
+            <a href="{% url 'bookings:create' %}" class="gold-button">Plan a new stay <span aria-hidden="true">&#8594;</span></a>
+        </div>
+
+        <div class="booking-list">
+        {% for booking in bookings %}
+            <article class="booking-card">
+                <div class="booking-card-heading">
+                    <div><p class="eyebrow mb-1">RESERVATION #{{ booking.id }}</p><h2>{{ booking.room.room_type.name }}</h2></div>
+                    <span class="status-pill status-{{ booking.status|lower }}">{{ booking.get_status_display }}</span>
+                </div>
+                <div class="booking-card-meta">
+                    <span>Room {{ booking.room.room_number }}</span>
+                    <span>{{ booking.check_in }} <span aria-hidden="true">&#8594;</span> {{ booking.check_out }}</span>
+                    <span>{{ booking.guests }} guest{{ booking.guests|pluralize }}</span>
+                    <strong>&#8377;{{ booking.total_price }}</strong>
+                </div>
+                <div class="booking-actions">
+                    <a href="{% url 'bookings:detail' booking.id %}" class="outline-button">View reservation</a>
+                    {% if booking.status == "PENDING" %}
+                    <form method="POST" action="{% url 'bookings:cancel' booking.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="outline-button">Cancel booking</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <div class="empty-state">
+                <span class="empty-state-mark" aria-hidden="true">✳</span>
+                <h3>Your next escape is waiting.</h3>
+                <p class="text-secondary">You don’t have any bookings yet. Explore the rooms and find your place in the valley.</p>
+                <a href="{% url 'home' %}#rooms" class="gold-button">Explore rooms</a>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

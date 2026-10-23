@@ -5,7 +5,7 @@ from django.db import transaction
 
 from accounts.models import User
 from payments.models import Payment
-from properties.models import Room
+from .availability import lock_room_for_inventory, room_has_conflict
 from .models import Booking
 
 
@@ -19,14 +19,12 @@ def validate_status_change(booking, new_status):
         return
 
     if new_status in {Booking.Status.CONFIRMED, Booking.Status.CHECKED_IN}:
-        conflicts = Booking.objects.filter(
-            room_id=booking.room_id,
-            check_in__lt=booking.check_out,
-            check_out__gt=booking.check_in,
-        ).exclude(pk=booking.pk).exclude(
-            status__in=[Booking.Status.CANCELLED, Booking.Status.CHECKED_OUT]
-        )
-        if conflicts.exists():
+        if room_has_conflict(
+            booking.room_id,
+            booking.check_in,
+            booking.check_out,
+            exclude_booking_id=booking.pk,
+        ):
             raise ValidationError(
                 "This room has another active booking for overlapping dates. "
                 "Resolve the conflict before changing this booking's status."
@@ -134,8 +132,8 @@ class BookingAdmin(admin.ModelAdmin):
         if not change:
             raise ValidationError("Bookings must be created through the validated booking flow.")
         with transaction.atomic():
+            lock_room_for_inventory(obj.room_id)
             current = Booking.objects.select_for_update().get(pk=obj.pk)
-            Room.objects.select_for_update().get(pk=current.room_id)
             validate_status_change(current, obj.status)
             current.transition_to(obj.status)
             obj.status = current.status

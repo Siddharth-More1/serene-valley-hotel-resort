@@ -180,6 +180,59 @@ class ServiceBillingWorkflowTests(TestCase):
         )
         self.assertEqual(FolioItem.objects.filter(request=service_request).count(), 1)
 
+    def test_early_checked_in_stay_allows_customer_requests_and_staff_usage(self):
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        self.booking.check_in = tomorrow
+        self.booking.check_out = tomorrow + timedelta(days=2)
+        self.booking.save(update_fields=["check_in", "check_out"])
+        customer_url = reverse("operations:service_request", args=[self.booking.pk])
+
+        self.client.force_login(self.guest)
+        response = self.client.get(customer_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Breakfast")
+        self.assertContains(response, "INR 25.00 per unit")
+        response = self.client.post(customer_url, {"service": self.service.pk, "quantity": 1})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ServiceRequest.objects.filter(booking=self.booking).exists())
+
+        self.client.force_login(self.receptionist)
+        staff_url = reverse("operations:add_folio_item", args=[self.booking.pk])
+        response = self.client.post(staff_url, {"service": self.service.pk, "quantity": 2})
+        self.assertEqual(response.status_code, 302)
+        item = FolioItem.objects.get(booking=self.booking, request__isnull=True)
+        self.assertEqual(item.line_total, Decimal("50.00"))
+
+    def test_unchecked_in_booking_cannot_request_or_record_services(self):
+        self.booking.status = Booking.Status.CONFIRMED
+        self.booking.save(update_fields=["status"])
+        customer_url = reverse("operations:service_request", args=[self.booking.pk])
+
+        self.client.force_login(self.guest)
+        response = self.client.get(customer_url)
+        self.assertFalse(response.context["can_request"])
+        self.assertContains(response, "Service requests are available only during your checked-in stay.")
+        self.client.post(customer_url, {"service": self.service.pk, "quantity": 1})
+        self.assertFalse(ServiceRequest.objects.filter(booking=self.booking).exists())
+
+        self.client.force_login(self.receptionist)
+        staff_url = reverse("operations:add_folio_item", args=[self.booking.pk])
+        self.client.post(staff_url, {"service": self.service.pk, "quantity": 1})
+        self.assertFalse(FolioItem.objects.filter(booking=self.booking).exists())
+
+    def test_inactive_services_are_hidden_and_cannot_be_requested(self):
+        inactive = Service.objects.create(
+            name="Inactive Spa", description="Temporarily unavailable", price=Decimal("90.00"), is_active=False
+        )
+        self.client.force_login(self.guest)
+        url = reverse("operations:service_request", args=[self.booking.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "Breakfast")
+        self.assertNotContains(response, "Inactive Spa")
+        self.assertFalse(response.context["form"].fields["service"].queryset.filter(pk=inactive.pk).exists())
+        self.client.post(url, {"service": inactive.pk, "quantity": 1})
+        self.assertFalse(ServiceRequest.objects.filter(booking=self.booking).exists())
+
     def test_customer_cannot_request_another_guest_booking_or_exceed_quantity(self):
         other_booking = Booking.objects.create(
             customer=self.other_guest, room=Room.objects.create(room_number="F-102", room_type=self.room_type),

@@ -35,7 +35,7 @@ def _booking_is_in_service_window(booking):
     today = timezone.localdate()
     return (
         booking.status == Booking.Status.CHECKED_IN
-        and booking.check_in <= today <= booking.check_out
+        and today <= booking.check_out
     )
 
 

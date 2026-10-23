@@ -86,6 +86,37 @@ class BookingWorkflowTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("room", form.errors)
 
+    def test_pending_reservation_holds_inventory(self):
+        self.make_booking(status=Booking.Status.PENDING)
+        form = BookingForm(self.booking_data())
+        self.assertFalse(form.is_valid())
+        self.assertIn("room", form.errors)
+
+    def test_checked_in_room_stays_unavailable_outside_scheduled_dates(self):
+        self.make_booking(
+            status=Booking.Status.CHECKED_IN,
+            check_in=self.check_in + timedelta(days=5),
+            check_out=self.check_out + timedelta(days=5),
+        )
+        form = BookingForm(self.booking_data())
+        self.assertFalse(form.is_valid())
+        self.assertIn("room", form.errors)
+
+    def test_other_physical_room_of_same_type_remains_available(self):
+        self.make_booking(status=Booking.Status.CONFIRMED)
+        other_room = Room.objects.create(room_number="102", room_type=self.room_type)
+        form = BookingForm(self.booking_data(room=other_room.pk))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_checkout_day_can_be_the_next_guests_checkin_day(self):
+        self.make_booking(
+            status=Booking.Status.CONFIRMED,
+            check_in=self.check_in - timedelta(days=2),
+            check_out=self.check_in,
+        )
+        form = BookingForm(self.booking_data())
+        self.assertTrue(form.is_valid(), form.errors)
+
     def test_cancelled_and_checked_out_bookings_do_not_block_room(self):
         self.make_booking(status=Booking.Status.CANCELLED)
         self.make_booking(
@@ -118,6 +149,7 @@ class BookingWorkflowTests(TestCase):
         self.assertEqual(booking.status, Booking.Status.PENDING)
 
     def test_final_availability_check_prevents_duplicate_booking(self):
+        self.client.get(self.create_url)
         self.make_booking()
         response = self.client.post(self.create_url, self.booking_data())
         self.assertEqual(response.status_code, 200)
@@ -150,6 +182,21 @@ class BookingWorkflowTests(TestCase):
         response = self.client.get(f"{self.create_url}?room_type={self.room_type.pk}")
         self.assertContains(response, "101 - Valley Suite")
         self.assertNotContains(response, "202 - Garden Room")
+
+    def test_room_selector_can_filter_by_requested_dates(self):
+        self.make_booking(status=Booking.Status.CONFIRMED)
+        other_room = Room.objects.create(room_number="203", room_type=self.room_type)
+        response = self.client.get(
+            self.create_url,
+            {
+                "room_type": self.room_type.pk,
+                "check_in": self.check_in.isoformat(),
+                "check_out": self.check_out.isoformat(),
+            },
+        )
+        choices = response.context["form"].fields["room"].queryset
+        self.assertNotIn(self.room.pk, choices.values_list("pk", flat=True))
+        self.assertIn(other_room.pk, choices.values_list("pk", flat=True))
 
     def test_customers_only_see_their_own_bookings_and_details(self):
         own = self.make_booking()
@@ -272,3 +319,20 @@ class BookingWorkflowTests(TestCase):
         form = BookingAdminForm(instance=paid_booking, data={"status": Booking.Status.CANCELLED})
         self.assertFalse(form.is_valid())
         self.assertIn("successful payment", str(form.errors))
+
+    def test_admin_confirmation_rechecks_availability_after_form_validation(self):
+        booking = self.make_booking()
+        model_admin = BookingAdmin(Booking, admin.site)
+        manager = User.objects.create_user(
+            username="confirm_manager",
+            password="StrongPass!9284",
+            role=User.Role.MANAGER,
+            is_staff=True,
+        )
+        request = type("Request", (), {"user": manager})()
+        form = BookingAdminForm(instance=booking, data={"status": Booking.Status.CONFIRMED})
+        self.assertTrue(form.is_valid(), form.errors)
+
+        self.make_booking(customer=self.other_customer)
+        with self.assertRaisesMessage(ValidationError, "overlapping dates"):
+            model_admin.save_model(request, form.save(commit=False), form, change=True)

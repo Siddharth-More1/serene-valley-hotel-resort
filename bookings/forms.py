@@ -1,7 +1,10 @@
 
+from datetime import date
+
 from django import forms
 from django.utils import timezone
 
+from .availability import available_rooms_for_stay, room_has_conflict
 from properties.models import Room
 from .models import Booking
 
@@ -20,13 +23,29 @@ class BookingForm(forms.ModelForm):
     def __init__(self, *args, room_type_id=None, **kwargs):
         super().__init__(*args, **kwargs)
         rooms = Room.objects.filter(status=Room.Status.AVAILABLE)
+        room_type_filter = None
         if room_type_id:
             try:
                 room_type_id = int(room_type_id)
             except (TypeError, ValueError):
                 rooms = rooms.none()
+                room_type_filter = -1
             else:
+                room_type_filter = room_type_id
                 rooms = rooms.filter(room_type_id=room_type_id)
+        if not self.is_bound:
+            check_in = self.initial.get("check_in")
+            check_out = self.initial.get("check_out")
+            try:
+                check_in = check_in if isinstance(check_in, date) else date.fromisoformat(check_in or "")
+                check_out = check_out if isinstance(check_out, date) else date.fromisoformat(check_out or "")
+            except (TypeError, ValueError):
+                pass
+            else:
+                if check_out > check_in:
+                    rooms = available_rooms_for_stay(
+                        check_in, check_out, room_type_id=room_type_filter
+                    )
         self.fields["room"].queryset = rooms.select_related(
             "room_type"
         ).order_by("room_number")
@@ -60,13 +79,7 @@ class BookingForm(forms.ModelForm):
             )
 
         if room and check_in and check_out and check_out > check_in:
-            has_conflict = room.bookings.filter(
-                check_in__lt=check_out,
-                check_out__gt=check_in,
-            ).exclude(
-                status__in=[Booking.Status.CANCELLED, Booking.Status.CHECKED_OUT]
-            ).exists()
-            if has_conflict:
+            if room_has_conflict(room.pk, check_in, check_out):
                 self.add_error("room", "This room is already booked for those dates. Choose another room or dates.")
 
         return cleaned_data

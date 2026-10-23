@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 
 from properties.models import Room
+from .availability import lock_room_for_inventory, room_has_conflict
 from .forms import BookingForm
 from .models import Booking
 from payments.models import Payment
@@ -25,18 +26,9 @@ def create_booking(request):
             check_out = form.cleaned_data["check_out"]
 
             with transaction.atomic():
-                # Locks serialize reservations for this room on databases that
-                # support row locks. Keep the overlap check inside the lock.
-                room = Room.objects.select_for_update().select_related(
-                    "room_type"
-                ).get(pk=room.pk)
-                overlapping = Booking.objects.filter(
-                    room=room,
-                    check_in__lt=check_out,
-                    check_out__gt=check_in,
-                ).exclude(
-                    status__in=[Booking.Status.CANCELLED, Booking.Status.CHECKED_OUT]
-                ).exists()
+                # Serialize inventory writes before the final overlap check.
+                room = lock_room_for_inventory(room.pk)
+                overlapping = room_has_conflict(room.pk, check_in, check_out)
 
                 if form.cleaned_data["guests"] > room.room_type.capacity:
                     form.add_error(
@@ -63,7 +55,14 @@ def create_booking(request):
                 )
                 return redirect("bookings:my_bookings")
     else:
-        form = BookingForm(room_type_id=room_type_id)
+        form = BookingForm(
+            room_type_id=room_type_id,
+            initial={
+                field: request.GET[field]
+                for field in ("check_in", "check_out")
+                if request.GET.get(field)
+            },
+        )
 
     return render(request, "bookings/create_booking.html", {"form": form})
 
